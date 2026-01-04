@@ -4,6 +4,37 @@ use crate::{
 };
 
 impl SimConnect {
+
+        /// Set data on a SimObject (including L:Vars) using a registered data definition.
+        ///
+        /// # Arguments
+        /// * `request_id` - The data definition ID (from register_object or new_request_id)
+        /// * `data` - Reference to the struct to send (must match the definition)
+        ///
+        /// # Example
+        /// ```rust
+        /// let lvar = AirplaneLVars { v1_speed: 123.0, ..Default::default() };
+        /// client.set_data_on_sim_object::<AirplaneLVars>(request_id, &lvar, simconnect_sdk::SIMCONNECT_OBJECT_ID_USER)?;
+        /// ```
+        pub fn set_data_on_sim_object<T: Sized>(
+            &self,
+            request_id: u32,
+            data: &T,
+            object_id: u32,
+        ) -> Result<(), SimConnectError> {
+            let size = std::mem::size_of::<T>() as u32;
+            success!(unsafe {
+                bindings::SimConnect_SetDataOnSimObject(
+                    self.handle.as_ptr(),
+                    request_id,
+                    object_id,
+                    0, // flags (0 = default)
+                    0, // ArrayCount (0 = single struct)
+                    size,
+                    data as *const T as *const std::ffi::c_void,
+                )
+            })
+        }
     // Register an object with SimConnect by assigning it an unique interval `request_id` and then calling the [`crate::SimConnectObjectExt::register`] method on the struct.
     #[tracing::instrument(name = "SimConnect::register_object", level = "debug", skip(self))]
     pub fn register_object<T: SimConnectObjectExt>(&mut self) -> Result<u32, SimConnectError> {
